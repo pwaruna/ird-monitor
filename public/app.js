@@ -1,7 +1,13 @@
-// app.js
+// public/app.js
+// RX8200/RX8000 IRD monitor frontend
+// - Renders cards per device
+// - Shows C/N and Link Margin with units (e.g., "12.7 dB", "+7.5 dB")
+// - Alarm chip prefers human label from trap (e.g., "No TS Lock"), falls back to OID in tooltip
+
 const grid = document.getElementById('grid');
 const cards = new Map(); // id -> HTMLElement
 
+// ----- Helpers -----
 function normalizeDbLike(val, showPlus = false) {
   if (val == null) return '-';
   if (typeof val === 'number') {
@@ -9,9 +15,9 @@ function normalizeDbLike(val, showPlus = false) {
     return (showPlus && n >= 0 ? '+' : '') + n.toFixed(1) + ' dB';
   }
   const s = String(val);
-  // If units already present, show as-is (clean up "  dB" spacing)
-  if (/dB/i.test(s)) return s.replace(/\s+dB/i, ' dB');
-  // Otherwise try to parse a number and append unit
+  // If units already present, normalize spacing only
+  if (/dB/i.test(s)) return s.replace(/\s+dB/i, ' dB').trim();
+  // Otherwise parse number and add unit
   const m = s.match(/([+-]?\d+(?:\.\d+)?)/);
   if (m) {
     const n = parseFloat(m[1]);
@@ -20,15 +26,31 @@ function normalizeDbLike(val, showPlus = false) {
   return s;
 }
 
+function escapeAttr(s) {
+  return String(s ?? '').replace(/"/g, '&quot;');
+}
+
+function alarmText(d) {
+  const label = d?.lastTrap?.label && String(d.lastTrap.label).trim();
+  const oid = d?.lastTrap?.trapOid && String(d.lastTrap.trapOid).trim();
+  const suffix = label || oid || '';
+  return `${d.alarm ? 'ALARM' : 'OK'}${suffix ? ' · ' + suffix : ''}`;
+}
+
+// ----- UI -----
 function cardTemplate(d) {
+  const titleAttr = escapeAttr(d.lastTrap?.trapOid || '');
   return `
     <div class="card" data-id="${d.id}">
       <div class="title">
         <h2>${d.id} <span style="font-weight:400;color:#9ca3af;font-size:12px">(${d.host})</span></h2>
-        <a class="alarm ${d.alarm ? 'bad' : 'ok'}" href="${d.webGui || '#'}" target="_blank" rel="noopener" title="${(d.lastTrap?.trapOid || '').replace(/"/g,'&quot;')}">
+        <a class="alarm ${d.alarm ? 'bad' : 'ok'}"
+           href="${d.webGui || '#'}"
+           target="_blank"
+           rel="noopener"
+           title="${titleAttr}">
           <span class="dot"></span> ${alarmText(d)}
         </a>
-
       </div>
       <div class="kv">
         <div class="box">
@@ -59,7 +81,7 @@ function upsertCard(d) {
     sortGrid();
   }
 
-  // Update values
+  // Values
   if (d.signal !== undefined)
     el.querySelector('[data-k="signal"]').textContent = d.signal;
 
@@ -69,24 +91,24 @@ function upsertCard(d) {
   if (d.margin !== undefined)
     el.querySelector('[data-k="margin"]').textContent = normalizeDbLike(d.margin, true);
 
-  // Update alarm chip
+  // Alarm chip
   const a = el.querySelector('.alarm');
   if (d.alarm !== undefined) {
     a.classList.toggle('bad', d.alarm);
     a.classList.toggle('ok', !d.alarm);
   }
   if (d.webGui) a.href = d.webGui;
-  // Update href and OID summary
-  if (d.webGui) a.href = d.webGui;
-  if (d.lastTrap) {
+
+  if (d.lastTrap !== undefined) {
+    // Re-render text and tooltip using label (preferred) or OID
     a.innerHTML = `<span class="dot"></span> ${alarmText(d)}`;
-    if (d.lastTrap.trapOid) a.title = d.lastTrap.trapOid;  // tooltip shows the OID
+    a.title = d.lastTrap?.trapOid ? d.lastTrap.trapOid : '';
   }
 }
 
 function sortGrid() {
   const nodes = Array.from(grid.children);
-  nodes.sort((a,b) => {
+  nodes.sort((a, b) => {
     const A = a.getAttribute('data-id');
     const B = b.getAttribute('data-id');
     return A.localeCompare(B, undefined, { numeric: true });
@@ -94,6 +116,7 @@ function sortGrid() {
   nodes.forEach(n => grid.appendChild(n));
 }
 
+// ----- WS -----
 function connectWS() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws`);
@@ -109,9 +132,7 @@ function connectWS() {
         grid.innerHTML = '';
         cards.clear();
         (msg.devices || []).forEach(upsertCard);
-      } else if (msg.type === 'update') {
-        upsertCard(msg);
-      } else if (msg.type === 'alarm') {
+      } else if (msg.type === 'update' || msg.type === 'alarm') {
         upsertCard(msg);
       }
     } catch (e) {
@@ -119,4 +140,5 @@ function connectWS() {
     }
   });
 }
+
 connectWS();
