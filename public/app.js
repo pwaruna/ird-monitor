@@ -25,9 +25,10 @@ function cardTemplate(d) {
     <div class="card" data-id="${d.id}">
       <div class="title">
         <h2>${d.id} <span style="font-weight:400;color:#9ca3af;font-size:12px">(${d.host})</span></h2>
-        <a class="alarm ${d.alarm ? 'bad' : 'ok'}" href="${d.webGui || '#'}" target="_blank" rel="noopener">
-          <span class="dot"></span> ${d.alarm ? 'ALARM' : 'OK'}${d.lastTrap?.trapOid ? ' · '+d.lastTrap.trapOid : ''}
+        <a class="alarm ${d.alarm ? 'bad' : 'ok'}" href="${d.webGui || '#'}" target="_blank" rel="noopener" title="${(d.lastTrap?.trapOid || '').replace(/"/g,'&quot;')}">
+          <span class="dot"></span> ${alarmText(d)}
         </a>
+
       </div>
       <div class="kv">
         <div class="box">
@@ -73,15 +74,13 @@ function upsertCard(d) {
   if (d.alarm !== undefined) {
     a.classList.toggle('bad', d.alarm);
     a.classList.toggle('ok', !d.alarm);
-    a.firstElementChild.style.color = '';
-    a.childNodes[1].textContent = d.alarm ? 'ALARM' : '!';
   }
+  if (d.webGui) a.href = d.webGui;
   // Update href and OID summary
   if (d.webGui) a.href = d.webGui;
-  if (d.lastTrap && d.lastTrap.trapOid) {
-    a.innerHTML = `<span class="dot"></span> ${d.alarm ? 'ALARM' : 'OK'} · ${d.lastTrap.trapOid}`;
-    a.classList.toggle('bad', d.alarm);
-    a.classList.toggle('ok', !d.alarm);
+  if (d.lastTrap) {
+    a.innerHTML = `<span class="dot"></span> ${alarmText(d)}`;
+    if (d.lastTrap.trapOid) a.title = d.lastTrap.trapOid;  // tooltip shows the OID
   }
 }
 

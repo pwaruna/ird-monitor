@@ -62,6 +62,14 @@ function vbToText(vb) {
   return String(v);
 }
 
+function alarmText(d) {
+  const label = d?.lastTrap?.label && String(d.lastTrap.label).trim();
+  const oid = d?.lastTrap?.trapOid && String(d.lastTrap.trapOid).trim();
+  const right = label || oid || '';
+  return `${d.alarm ? 'ALARM' : 'OK'}${right ? ' · ' + right : ''}`;
+}
+
+
 // Extract first number (supports "+07.5 dB", "12.70 dB", etc.)
 function extractNumber(x) {
   const m = String(x ?? "").match(/([+-]?\d+(?:\.\d+)?)/);
