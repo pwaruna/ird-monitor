@@ -62,14 +62,6 @@ function vbToText(vb) {
   return String(v);
 }
 
-function alarmText(d) {
-  const label = d?.lastTrap?.label && String(d.lastTrap.label).trim();
-  const oid = d?.lastTrap?.trapOid && String(d.lastTrap.trapOid).trim();
-  const right = label || oid || '';
-  return `${d.alarm ? 'ALARM' : 'OK'}${right ? ' · ' + right : ''}`;
-}
-
-
 // Extract first number (supports "+07.5 dB", "12.70 dB", etc.)
 function extractNumber(x) {
   const m = String(x ?? "").match(/([+-]?\d+(?:\.\d+)?)/);
@@ -276,7 +268,7 @@ function handleIncomingTrap(notification) {
 
     // snmpTrapOID.0
     const trapOid = vbToText(vbs.find(v => v.oid === "1.3.6.1.6.3.1.1.4.1.0"));
-    // A human label appears in RX8000 traps here (e.g. "No TS Lock") per your tcpdump:
+    // A human label appears in RX8000 traps here (e.g. "No TS Lock")
     // 1.3.6.1.4.1.1773.1.1.9.1.8
     const label = vbToText(vbs.find(v => v.oid === "1.3.6.1.4.1.1773.1.1.9.1.8")) || "";
 
