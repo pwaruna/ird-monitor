@@ -243,16 +243,18 @@ function startTrapListener() {
     // 2) Alternative API: createReceiver(options, callback)
     if (typeof snmp.createReceiver === 'function') {
       const receiver = snmp.createReceiver(
-        { port: TRAP_PORT, transport: 'udp4' },
-        (error, msg, rinfo) => {
-          if (error) { console.error('Trap error:', error); return; }
-          handleIncomingTrap(msg, rinfo);
+        {
+          port: TRAP_PORT,          // 1162 in your case
+          transport: "udp4",
+          disableAuthorization: true,       // <-- accept any v1/v2c community
+          includeAuthentication: true       // <-- adds community/user to callback
+        },
+        (error, notification) => {
+          if (error) { console.error("Trap error:", error); return; }
+          // notification.pdu.varbinds + notification.rinfo
+          handleIncomingTrap(notification, notification.rinfo);
         }
       );
-      if (receiver && typeof receiver.on === 'function') {
-        receiver.on('error', (e) => console.error('Trap socket error:', e));
-      }
-      trap = receiver;
       console.log(`Trap receiver (createReceiver) active on udp/${TRAP_PORT}`);
       return;
     }

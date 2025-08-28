@@ -74,7 +74,7 @@ function upsertCard(d) {
     a.classList.toggle('bad', d.alarm);
     a.classList.toggle('ok', !d.alarm);
     a.firstElementChild.style.color = '';
-    a.childNodes[1].textContent = d.alarm ? 'ALARM' : 'OK';
+    a.childNodes[1].textContent = d.alarm ? 'ALARM' : '!';
   }
   // Update href and OID summary
   if (d.webGui) a.href = d.webGui;
