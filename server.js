@@ -335,6 +335,49 @@ function startTrapListener() {
 
 startTrapListener();
 
+// >>> simulateTrap endpoint (added back) <<<
+// POST /api/simulateTrap/:id?state=on|off&category=alarmCritical&detail=No+TS+Lock&trapOid=1.3.6.1...
+app.post("/api/simulateTrap/:id", (req, res) => {
+  const id = req.params.id;
+  const dev = state.get(id);
+  if (!dev) return res.status(404).json({ error: "Unknown device id" });
+
+  const stateParam = String(req.query.state || "on").toLowerCase();
+  const category = String(req.query.category || "alarmMinor");
+  const detail   = String(req.query.detail || "simulated");
+  const trapOid  = String(req.query.trapOid || "simulated");
+
+  if (stateParam === "off" || stateParam === "clear") {
+    dev.activeTraps.clear();
+    dev.alarm = false;
+    dev.lastTrap = {
+      when: Date.now(),
+      trapOid,
+      label: "alarmNormal",
+      category: "alarmNormal",
+      detail: "simulated clear",
+      from: "127.0.0.1",
+      community: "-"
+    };
+  } else {
+    dev.activeTraps.add(category);
+    dev.alarm = true;
+    dev.lastTrap = {
+      when: Date.now(),
+      trapOid,
+      label: category,      // pill shows ONLY the category
+      category,
+      detail,
+      from: "127.0.0.1",
+      community: "-"
+    };
+  }
+
+  broadcast({ type: "alarm", id, alarm: dev.alarm, lastTrap: dev.lastTrap });
+  return res.json({ ok: true, id, alarm: dev.alarm, activeTraps: Array.from(dev.activeTraps), lastTrap: dev.lastTrap });
+});
+
+
 // ----------------- Start HTTP server -----------------
 server.listen(PORT, HOST, () => {
   console.log(`IRD Monitor backend running on http://${HOST}:${PORT}`);
