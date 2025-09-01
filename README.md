@@ -55,6 +55,11 @@ curl -XPOST 'http://localhost:8080/api/simulateTrap/IRD-1?state=on'   # turn ala
 curl -XPOST 'http://localhost:8080/api/simulateTrap/IRD-1?state=off'  # clear alarm
 ```
 
+curl -X POST "http://localhost:8080/api/simulateTrap/IRD-4?state=on&category=alarmCritical&detail=Simulated+RF+Loss"
+
+curl -X POST "http://localhost:8080/api/simulateTrap/IRD-1?state=off"
+
+
 ## Structure
 ```
 ird-monitor/
